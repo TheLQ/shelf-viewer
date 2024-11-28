@@ -10,11 +10,13 @@ const U_FULL_BLOCK: &str = "\u{2588}";
 const U_LOWER_ONE_EIGHTH_BLOCK: &str = "\u{2581}";
 const U_LEFT_ONE_EIGHTH_BLOCK: &str = "\u{258F}";
 
+pub const ALERT_LOCATING: &str = "🚨";
+
 impl ConsoleViewer {
     pub fn print(&self, states: &[SlotState]) {
-        let cell_width = 20;
+        let cell_width = 21;
         let row_sep = U_LOWER_ONE_EIGHTH_BLOCK
-            .repeat(cell_width + 1)
+            .repeat(cell_width + 1/*cols*/ + 2 /*end flag*/)
             .repeat(self.width);
         let row_char_len = row_sep.chars().count();
         let column_sep = U_LEFT_ONE_EIGHTH_BLOCK;
@@ -50,15 +52,28 @@ impl ConsoleViewer {
                 continue;
             }
             match &states[*slot] {
-                SlotState::Device { group_key, content } => {
+                SlotState::Device {
+                    group_key,
+                    content,
+                    end_flag_char,
+                } => {
                     let device_color = pool_colors.get_color(group_key.as_str());
 
                     output.push_str(&format!(
-                        "{}{:cell_width$}{}",
-                        device_color, content, ASCII_RESET
+                        "{}{:cell_width$}{}{}",
+                        device_color,
+                        content,
+                        single_flag_emoji(end_flag_char),
+                        ASCII_RESET
                     ))
                 }
-                SlotState::Empty => output.push_str(&format!("{:cell_width$}", "Empty")),
+                SlotState::Empty { end_flag_char } => output.push_str(&format!(
+                    "{}{:cell_width$}{}{}",
+                    ASCII_RESET,
+                    "Empty",
+                    ASCII_RESET,
+                    single_flag_emoji(end_flag_char),
+                )),
             }
         }
         output.push('\n');
@@ -68,10 +83,27 @@ impl ConsoleViewer {
     }
 }
 
+fn single_flag_emoji(flag: &Option<&str>) -> String {
+    let flag_char = flag.map(|f| f.to_string()).unwrap_or("--".to_string());
+    flag_char
+}
+
+fn single_flag<'a>(flag: &Option<&'a str>) -> &'a str {
+    let flag_char = flag.unwrap_or("-");
+    assert_eq!(flag_char.chars().count(), 1, "too long {}", flag_char);
+    flag_char
+}
+
 #[derive(PartialEq)]
 pub enum SlotState {
-    Device { group_key: String, content: String },
-    Empty,
+    Device {
+        group_key: String,
+        content: String,
+        end_flag_char: Option<&'static str>,
+    },
+    Empty {
+        end_flag_char: Option<&'static str>,
+    },
 }
 
 pub enum SlotPrintOrder {

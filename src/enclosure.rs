@@ -1,6 +1,6 @@
 use std::{
     fs::{read_dir, read_to_string},
-    io::ErrorKind,
+    io::{self, ErrorKind},
     path::{Path, PathBuf},
 };
 
@@ -86,10 +86,10 @@ pub struct Slot {
 impl Slot {
     pub fn block_device_sys(&self) -> Option<PathBuf> {
         let block_root_dir = self.files(&["device", "block"]);
-        match read_dir_with_single_file(block_root_dir) {
+        match read_dir_with_single_file(&block_root_dir) {
             Ok(block_dir) => Some(block_dir),
             Err(SError::Io { err, .. }) if err.kind() == ErrorKind::NotFound => None,
-            Err(e) => panic!("fail block device {}", e),
+            Err(e) => panic!("fail block device {} {}", block_root_dir.display(), e),
         }
     }
 
@@ -98,6 +98,16 @@ impl Slot {
             let os_name = block_device_sys.file_name().unwrap();
             os_name.to_str().unwrap().to_string()
         })
+    }
+
+    pub fn is_locating(&self) -> bool {
+        let path: PathBuf = self.file("locate");
+        match read_to_string(&path) {
+            Ok(content) => content.trim() == "1",
+            // enclosure doesn't support locating
+            Err(e) if e.kind() == ErrorKind::NotFound => false,
+            Err(e) => panic!("fail readling locate {} {}", path.display(), e),
+        }
     }
 }
 
