@@ -3,7 +3,7 @@
 use std::env::args;
 
 use shelf_viewer::{
-    console_viewer::{print_console_viewer, SlotState},
+    console_viewer::{ConsoleViewer, SlotState},
     enclosure::Enclosure,
     err::SResult,
     zfs::ZfsList,
@@ -21,10 +21,8 @@ fn inner_main() -> SResult<()> {
     let width: usize = args[1].parse().expect("missing width arg");
 
     let enclosure = Enclosure::load_only()?;
-    println!("enclosure {:?}", enclosure);
-
-    let slot_len = enclosure.slot_len()?;
-    println!("slot count {}", slot_len);
+    let slot_len = enclosure.slot_len().unwrap();
+    println!("enclosure {:?} with {} slots", enclosure, slot_len);
 
     let zfs_list = ZfsList::execute();
 
@@ -38,16 +36,16 @@ fn inner_main() -> SResult<()> {
                 for vdev in &pool.vdevs {
                     if vdev.vdev_name == device {
                         message = Some(SlotState::Device {
-                            pool: format!("ZFS {}", pool.pool_name),
-                            device: format!("{}", vdev.vdev_name),
+                            group_key: format!("ZFS {}", pool.pool_name),
+                            content: format!("ZFS {} - {}", pool.pool_name, vdev.vdev_name),
                         });
                     }
                 }
             }
             if message == None {
                 message = Some(SlotState::Device {
-                    pool: "___".to_string(),
-                    device,
+                    group_key: "___".to_string(),
+                    content: format!("___ {}", device),
                 })
             }
             states.push(message.unwrap())
@@ -56,7 +54,12 @@ fn inner_main() -> SResult<()> {
         }
     }
     println!("states {}", states.len());
-    print_console_viewer(&states, width);
+
+    ConsoleViewer {
+        title: Some("asdf".to_string()),
+        width,
+    }
+    .print(&states);
 
     Ok(())
 }

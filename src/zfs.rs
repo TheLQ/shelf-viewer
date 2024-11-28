@@ -16,7 +16,7 @@ fn execute_command(linux_command: &str, args: impl IntoIterator<Item = impl AsRe
     if !out.stderr.is_empty() {
         panic!("stderr: {}", String::from_utf8(out.stderr).unwrap());
     }
-    String::from_utf8(out.stdout).unwrap()
+    String::from_utf8(out.stdout).unwrap().trim().to_string()
 }
 
 #[derive(Default)]
@@ -49,8 +49,23 @@ impl ZfsList {
             } else {
                 current_pool.vdevs.push(ZfsListVDev::from_vdev_line(line))
             }
-            println!("{}", line);
+            // println!("{}", line);
         }
+        println!(
+            "'zpool list' found {} pools ({}) with {} vdevs",
+            zfslist.pools.len(),
+            zfslist
+                .pools
+                .iter()
+                .map(|pool| pool.pool_name.as_str())
+                .collect::<Vec<&str>>()
+                .join(", "),
+            zfslist
+                .pools
+                .iter()
+                .map(|pool| pool.vdevs.len())
+                .sum::<usize>()
+        );
         zfslist
     }
 }

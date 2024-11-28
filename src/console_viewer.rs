@@ -1,52 +1,61 @@
 use crate::colors::{ColorMap, ASCII_RESET};
 
-pub fn print_console_viewer(states: &[SlotState], width: usize) {
-    let cell_width = 20;
-    let row_sep = "\u{2581}".repeat(cell_width + 1).repeat(width);
-    let column_sep = "\u{258F}";
+pub struct ConsoleViewer {
+    pub width: usize,
+    pub title: Option<String>,
+}
 
-    let mut pool_colors = ColorMap::default();
+impl ConsoleViewer {
+    pub fn print(&self, states: &[SlotState]) {
+        let cell_width = 20;
+        let row_sep = "\u{2581}".repeat(cell_width + 1).repeat(self.width);
+        let column_sep = "\u{258F}";
 
-    let mut output = String::new();
-    let slot_order = SlotPrintOrder::BottomLeftGoingUp;
-    for (i, slot) in slot_order.order(states.len(), width).iter().enumerate() {
-        if i % width == 0 {
-            if i != 0 {
-                output.push_str(&column_sep);
+        let mut pool_colors = ColorMap::default();
+
+        let mut output = String::new();
+        let slot_order = SlotPrintOrder::BottomLeftGoingUp;
+        for (i, slot) in slot_order
+            .order(states.len(), self.width)
+            .iter()
+            .enumerate()
+        {
+            if i % self.width == 0 {
+                if i != 0 {
+                    output.push_str(&column_sep);
+                }
+                output.push('\n');
+                output.push_str(&row_sep);
+                output.push('\n');
             }
-            output.push('\n');
-            output.push_str(&row_sep);
-            output.push('\n');
-        }
-        output.push_str(&column_sep);
+            output.push_str(&column_sep);
 
-        if *slot > 23 {
-            println!("skippp {}", i);
-            continue;
-        }
-        match &states[*slot] {
-            SlotState::Device { device, pool } => {
-                let device_color = pool_colors.get_color(pool.clone());
-
-                output.push_str(&format!(
-                    "{}{:cell_width$}{}",
-                    device_color,
-                    format!("{} {}", device, pool),
-                    ASCII_RESET
-                ))
+            if *slot > 23 {
+                println!("skippp {}", i);
+                continue;
             }
-            SlotState::Empty => output.push_str(&format!("{:cell_width$}", "Empty")),
+            match &states[*slot] {
+                SlotState::Device { group_key, content } => {
+                    let device_color = pool_colors.get_color(group_key.as_str());
+
+                    output.push_str(&format!(
+                        "{}{:cell_width$}{}",
+                        device_color, content, ASCII_RESET
+                    ))
+                }
+                SlotState::Empty => output.push_str(&format!("{:cell_width$}", "Empty")),
+            }
         }
+        output.push('\n');
+        output.push_str(&row_sep);
+
+        println!("{}", output);
     }
-    output.push('\n');
-    output.push_str(&row_sep);
-
-    println!("{}", output);
 }
 
 #[derive(PartialEq)]
 pub enum SlotState {
-    Device { pool: String, device: String },
+    Device { group_key: String, content: String },
     Empty,
 }
 
