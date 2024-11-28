@@ -3,7 +3,7 @@
 use std::env::args;
 
 use shelf_viewer::{
-    console_viewer::{ConsoleViewer, SlotPrintOrder, SlotState},
+    console_widget::{ConsoleViewer, SlotPrintOrder, SlotState},
     enclosure::Enclosure,
     err::SResult,
     zfs::ZfsList,
