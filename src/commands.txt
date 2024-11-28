@@ -1,0 +1,2 @@
+readlink -f /sys/class/enclosure/0\:0\:15\:0/Slot*/device /sys/class/enclosure/0\:0\:15\:0/device
+

@@ -3,19 +3,34 @@ use crate::colors::{ColorMap, ASCII_RESET};
 pub struct ConsoleViewer {
     pub width: usize,
     pub title: Option<String>,
+    pub slot_order: SlotPrintOrder,
 }
+
+const U_FULL_BLOCK: &str = "\u{2588}";
+const U_LOWER_ONE_EIGHTH_BLOCK: &str = "\u{2581}";
+const U_LEFT_ONE_EIGHTH_BLOCK: &str = "\u{258F}";
 
 impl ConsoleViewer {
     pub fn print(&self, states: &[SlotState]) {
         let cell_width = 20;
-        let row_sep = "\u{2581}".repeat(cell_width + 1).repeat(self.width);
-        let column_sep = "\u{258F}";
+        let row_sep = U_LOWER_ONE_EIGHTH_BLOCK
+            .repeat(cell_width + 1)
+            .repeat(self.width);
+        let row_char_len = row_sep.chars().count();
+        let column_sep = U_LEFT_ONE_EIGHTH_BLOCK;
 
         let mut pool_colors = ColorMap::default();
 
         let mut output = String::new();
-        let slot_order = SlotPrintOrder::BottomLeftGoingUp;
-        for (i, slot) in slot_order
+
+        output.push_str(&U_FULL_BLOCK.repeat(row_char_len));
+        output.push('\n');
+        if let Some(title) = &self.title {
+            output.push_str(&format!("{:-^row_char_len$}", title,));
+        }
+
+        for (i, slot) in self
+            .slot_order
             .order(states.len(), self.width)
             .iter()
             .enumerate()
@@ -59,7 +74,7 @@ pub enum SlotState {
     Empty,
 }
 
-enum SlotPrintOrder {
+pub enum SlotPrintOrder {
     TopLeftGoingDown,
     BottomLeftGoingUp,
 }

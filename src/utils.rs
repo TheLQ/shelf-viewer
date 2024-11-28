@@ -1,3 +1,4 @@
+use std::fs::read_to_string;
 use std::io;
 use std::{
     fs::{read_dir, DirEntry},
@@ -16,4 +17,8 @@ pub fn read_dir_with_single_file(dir: impl AsRef<Path>) -> SResult<PathBuf> {
     );
     let file = files.pop().unwrap().unwrap();
     Ok(file.path())
+}
+
+pub fn read_to_string_trim(path: impl AsRef<Path>) -> io::Result<String> {
+    Ok(read_to_string(path)?.trim().to_string())
 }

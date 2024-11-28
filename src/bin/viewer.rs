@@ -3,7 +3,7 @@
 use std::env::args;
 
 use shelf_viewer::{
-    console_viewer::{ConsoleViewer, SlotState},
+    console_viewer::{ConsoleViewer, SlotPrintOrder, SlotState},
     enclosure::Enclosure,
     err::SResult,
     zfs::ZfsList,
@@ -55,9 +55,16 @@ fn inner_main() -> SResult<()> {
     }
     println!("states {}", states.len());
 
+    let title = format!(
+        "{} {}",
+        enclosure.device_vendor().unwrap_or("no_vendor".into()),
+        enclosure.device_model().unwrap_or("no_model".into())
+    );
+
     ConsoleViewer {
-        title: Some("asdf".to_string()),
+        title: Some(title),
         width,
+        slot_order: SlotPrintOrder::BottomLeftGoingUp,
     }
     .print(&states);
 

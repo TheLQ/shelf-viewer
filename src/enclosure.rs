@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     err::{io_op, io_op_magic, SError, SResult},
-    utils::read_dir_with_single_file,
+    utils::{read_dir_with_single_file, read_to_string_trim},
 };
 
 const ENCLOSURE_DIR: &str = "/sys/class/enclosure";
@@ -19,11 +19,11 @@ pub struct Enclosure {
 impl Enclosure {
     pub fn load_only() -> SResult<Self> {
         Ok(Self {
-            enc_id: Self::find_enclosure_id()?,
+            enc_id: Self::find_only_enclosure_id()?,
         })
     }
 
-    fn find_enclosure_id() -> SResult<String> {
+    fn find_only_enclosure_id() -> SResult<String> {
         let read = io_op_magic(read_dir, ENCLOSURE_DIR)?;
         let enclosures: SResult<Vec<String>> = read
             .map(|file| {
@@ -57,6 +57,16 @@ impl Enclosure {
             enc_id: self.enc_id.clone(),
             slot_id,
         }
+    }
+
+    pub fn device_vendor(&self) -> SResult<String> {
+        let path = self.files(&["device", "vendor"]);
+        io_op_magic(read_to_string_trim, &path)
+    }
+
+    pub fn device_model(&self) -> SResult<String> {
+        let path = self.files(&["device", "model"]);
+        io_op_magic(read_to_string_trim, &path)
     }
 }
 
