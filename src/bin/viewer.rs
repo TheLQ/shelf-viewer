@@ -1,6 +1,6 @@
 // #![feature(iter_chain)]
 
-use std::{env::args, path::PathBuf};
+use std::env::args;
 
 use shelf_viewer::{enclosure::Enclosure, err::SResult};
 
@@ -12,7 +12,8 @@ fn inner_main() -> SResult<()> {
     println!("start");
 
     let args: Vec<String> = args().collect();
-    let width: usize = args[0].parse().expect("missing width arg");
+    println!("args {}", args.join(","));
+    let width: usize = args[1].parse().expect("missing width arg");
 
     let enclosure = Enclosure::load_only()?;
     println!("enclosure {:?}", enclosure);
@@ -24,19 +25,20 @@ fn inner_main() -> SResult<()> {
     for slot in 0..slot_len {
         let slot = enclosure.slot(slot);
 
-        if let Some(device) = slot.device() {
+        if let Some(device) = slot.block_device_name() {
             states.push(SlotState::Device(device))
         } else {
             states.push(SlotState::Empty)
         }
     }
+    println!("states {}", states.len());
     print_state(&states, width);
 
     Ok(())
 }
 
 fn print_state(states: &[SlotState], width: usize) {
-    let base = "\0xB0";
+    let base = "\u{2588}";
     let line_sep = base.repeat(width);
     let column_sep = base;
     let cell_width = 10;
@@ -48,7 +50,7 @@ fn print_state(states: &[SlotState], width: usize) {
         }
 
         match state {
-            SlotState::Device(device) => output.push_str(&device.to_string_lossy()),
+            SlotState::Device(device) => output.push_str(&device),
             SlotState::Empty => output.push_str("___"),
         }
 
@@ -57,9 +59,11 @@ fn print_state(states: &[SlotState], width: usize) {
             output.push('\n');
         }
     }
+
+    print!("{}", output);
 }
 
 enum SlotState {
-    Device(PathBuf),
+    Device(String),
     Empty,
 }

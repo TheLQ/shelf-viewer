@@ -1,9 +1,13 @@
 use std::{
-    fs::{read_dir, read_link, read_to_string},
+    fs::{read_dir, read_to_string},
+    io::ErrorKind,
     path::{Path, PathBuf},
 };
 
-use crate::err::{io_op, io_op_magic, SError, SResult};
+use crate::{
+    err::{io_op, io_op_magic, SError, SResult},
+    utils::read_dir_with_single_file,
+};
 
 const ENCLOSURE_DIR: &str = "/sys/class/enclosure";
 
@@ -41,8 +45,11 @@ impl Enclosure {
     }
 
     pub fn slot_len(&self) -> SResult<usize> {
-        let slots = io_op_magic(read_to_string, self.files(&["components"]))?;
-        Ok(slots.parse().map_err(|_| SError::ComponentsNaN)?)
+        let components_path = self.files(&["components"]);
+        let slots = io_op_magic(read_to_string, &components_path)?;
+        Ok(slots.trim().parse().map_err(|_| SError::ComponentsNaN {
+            path: components_path,
+        })?)
     }
 
     pub fn slot(&self, slot_id: usize) -> Slot {
@@ -67,14 +74,20 @@ pub struct Slot {
 }
 
 impl Slot {
-    pub fn device(&self) -> Option<PathBuf> {
-        let device_file = self.file("device");
-        if device_file.is_symlink() {
-            let res = io_op_magic(read_link, device_file).unwrap();
-            Some(res)
-        } else {
-            None
+    pub fn block_device_sys(&self) -> Option<PathBuf> {
+        let block_root_dir = self.files(&["device", "block"]);
+        match read_dir_with_single_file(block_root_dir) {
+            Ok(block_dir) => Some(block_dir),
+            Err(SError::Io { err, .. }) if err.kind() == ErrorKind::NotFound => None,
+            Err(e) => panic!("fail block device {}", e),
         }
+    }
+
+    pub fn block_device_name(&self) -> Option<String> {
+        self.block_device_sys().map(|block_device_sys| {
+            let os_name = block_device_sys.file_name().unwrap();
+            os_name.to_str().unwrap().to_string()
+        })
     }
 }
 
@@ -82,7 +95,7 @@ impl HasFiles for Slot {
     fn root(&self) -> PathBuf {
         let mut path = PathBuf::from(ENCLOSURE_DIR);
         path.push(&self.enc_id);
-        path.push(&format!("slot{:02}", self.slot_id));
+        path.push(&format!("Slot{:02}", self.slot_id));
         path
     }
 }

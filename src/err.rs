@@ -21,8 +21,8 @@ pub enum SError {
     NoEnclosuresFound,
     #[error("MoreThanOneEnclosureFound")]
     MoreThanOneEnclosureFound,
-    #[error("ComponentsNaN")]
-    ComponentsNaN,
+    #[error("ComponentsNaN {path}")]
+    ComponentsNaN { path: PathBuf },
 }
 
 impl Debug for SError {
