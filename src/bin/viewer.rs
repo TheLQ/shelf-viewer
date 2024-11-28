@@ -1,6 +1,6 @@
 // #![feature(iter_chain)]
 
-use std::env::args;
+use std::{cell, env::args};
 
 use shelf_viewer::{enclosure::Enclosure, err::SResult};
 
@@ -38,29 +38,31 @@ fn inner_main() -> SResult<()> {
 }
 
 fn print_state(states: &[SlotState], width: usize) {
+    let cell_width = 12;
     let base = "\u{2588}";
-    let line_sep = base.repeat(width);
+    let row_sep = base.repeat(cell_width + 2).repeat(width);
     let column_sep = base;
-    let cell_width = 10;
 
     let mut output = String::new();
     for (i, state) in states.iter().enumerate() {
         if i % width == 0 {
-            output.push_str(&line_sep);
-        }
-
-        match state {
-            SlotState::Device(device) => output.push_str(&device),
-            SlotState::Empty => output.push_str("___"),
-        }
-
-        if i % width == 0 {
-            output.push_str(&column_sep);
+            output.push('\n');
+            output.push_str(&row_sep);
             output.push('\n');
         }
-    }
+        output.push_str(&column_sep);
 
-    print!("{}", output);
+        match state {
+            SlotState::Device(device) => output.push_str(&format!("{:cell_width$}", device)),
+            SlotState::Empty => output.push_str(&format!("{:cell_width$}", "Empty")),
+        }
+
+        output.push_str(&column_sep);
+    }
+    output.push('\n');
+    output.push_str(&row_sep);
+
+    println!("{}", output);
 }
 
 enum SlotState {
