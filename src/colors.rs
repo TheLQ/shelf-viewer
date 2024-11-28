@@ -37,9 +37,9 @@ pub struct ColorMap<T> {
 
 impl<T: Eq + Hash + ToString> ColorMap<T> {
     pub fn get_color(&mut self, data_entry: T) -> &'static str {
-        let dc_entry = data_entry.to_string();
+        // let dc_entry = data_entry.to_string();
         self.data.entry(data_entry).or_insert_with(|| {
-            println!("inserting {}", dc_entry);
+            // println!("inserting {}", dc_entry);
             self.color_wheel.next()
         })
     }

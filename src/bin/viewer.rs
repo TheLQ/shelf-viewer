@@ -1,9 +1,9 @@
 // #![feature(iter_chain)]
 
-use std::{collections::HashMap, env::args};
+use std::env::args;
 
 use shelf_viewer::{
-    colors::{ColorMap, ColorWheel, ASCII_RESET},
+    console_viewer::{print_console_viewer, SlotState},
     enclosure::Enclosure,
     err::SResult,
     zfs::ZfsList,
@@ -56,52 +56,7 @@ fn inner_main() -> SResult<()> {
         }
     }
     println!("states {}", states.len());
-    print_state(&states, width);
+    print_console_viewer(&states, width);
 
     Ok(())
-}
-
-fn print_state(states: &[SlotState], width: usize) {
-    let cell_width = 20;
-    let row_sep = "\u{2581}".repeat(cell_width + 1).repeat(width);
-    let column_sep = "\u{258F}";
-
-    let mut pool_colors = ColorMap::default();
-
-    let mut output = String::new();
-    for (i, state) in states.iter().enumerate() {
-        if i % width == 0 {
-            if i != 0 {
-                output.push_str(&column_sep);
-            }
-            output.push('\n');
-            output.push_str(&row_sep);
-            output.push('\n');
-        }
-        output.push_str(&column_sep);
-
-        match state {
-            SlotState::Device { device, pool } => {
-                let device_color = pool_colors.get_color(pool.clone());
-
-                output.push_str(&format!(
-                    "{}{:cell_width$}{}",
-                    device_color,
-                    format!("{} {}", device, pool),
-                    ASCII_RESET
-                ))
-            }
-            SlotState::Empty => output.push_str(&format!("{:cell_width$}", "Empty")),
-        }
-    }
-    output.push('\n');
-    output.push_str(&row_sep);
-
-    println!("{}", output);
-}
-
-#[derive(PartialEq)]
-enum SlotState {
-    Device { pool: String, device: String },
-    Empty,
 }
