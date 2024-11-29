@@ -35,6 +35,8 @@ fn inner_main() -> SResult<()> {
             device_flag = Some(ALERT_LOCATING);
         }
 
+        let prefix = Some(slot_id.to_string());
+
         if let Some(device) = slot.block_device_name() {
             let mut message = None;
             for pool in &zfs_list.pools {
@@ -43,7 +45,8 @@ fn inner_main() -> SResult<()> {
                         message = Some(SlotState::Device {
                             group_key: format!("ZFS {}", pool.pool_name),
                             content: format!("ZFS {} - {}", pool.pool_name, vdev.vdev_name),
-                            end_flag_char: device_flag,
+                            prefix: prefix.clone(),
+                            suffix: device_flag,
                         });
                     }
                 }
@@ -52,13 +55,15 @@ fn inner_main() -> SResult<()> {
                 message = Some(SlotState::Device {
                     group_key: "___".to_string(),
                     content: format!("___ {}", device),
-                    end_flag_char: device_flag,
+                    prefix,
+                    suffix: device_flag,
                 })
             }
             states.push(message.unwrap())
         } else {
             states.push(SlotState::Empty {
-                end_flag_char: device_flag,
+                prefix,
+                suffix: device_flag,
             })
         }
     }

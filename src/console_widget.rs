@@ -12,11 +12,12 @@ const U_LEFT_ONE_EIGHTH_BLOCK: &str = "\u{258F}";
 
 pub const ALERT_LOCATING: &str = "🚨";
 
+const CELL_WIDTH: usize = 21;
+
 impl ConsoleViewer {
     pub fn print(&self, states: &[SlotState]) {
-        let cell_width = 21;
         let row_sep = U_LOWER_ONE_EIGHTH_BLOCK
-            .repeat(cell_width + 1/*cols*/ + 2 /*end flag*/)
+            .repeat(CELL_WIDTH + 1/*cols*/ + 3 /*prefix*/ + 2 /*suffix*/)
             .repeat(self.width);
         let row_char_len = row_sep.chars().count();
         let column_sep = U_LEFT_ONE_EIGHTH_BLOCK;
@@ -55,24 +56,26 @@ impl ConsoleViewer {
                 SlotState::Device {
                     group_key,
                     content,
-                    end_flag_char,
+
+                    prefix,
+                    suffix,
                 } => {
                     let device_color = pool_colors.get_color(group_key.as_str());
 
                     output.push_str(&format!(
-                        "{}{:cell_width$}{}{}",
+                        "{}{}{:CELL_WIDTH$}{}{}",
                         device_color,
+                        huge_flag_string(prefix),
                         content,
-                        single_flag_emoji(end_flag_char),
+                        wide_flag(suffix),
                         ASCII_RESET
                     ))
                 }
-                SlotState::Empty { end_flag_char } => output.push_str(&format!(
-                    "{}{:cell_width$}{}{}",
-                    ASCII_RESET,
+                SlotState::Empty { prefix, suffix } => output.push_str(&format!(
+                    "{}{:CELL_WIDTH$}{}",
+                    huge_flag_string(prefix),
                     "Empty",
-                    ASCII_RESET,
-                    single_flag_emoji(end_flag_char),
+                    wide_flag(suffix),
                 )),
             }
         }
@@ -83,8 +86,28 @@ impl ConsoleViewer {
     }
 }
 
-fn single_flag_emoji(flag: &Option<&str>) -> String {
-    let flag_char = flag.map(|f| f.to_string()).unwrap_or("--".to_string());
+fn wide_flag(flag: &Option<&str>) -> String {
+    let flag_char = flag.map(|f| f.to_string()).unwrap_or("  ".to_string());
+    flag_char
+}
+
+fn wide_flag_string(flag: &Option<String>) -> String {
+    let flag_char = flag.clone().unwrap_or("  ".to_string());
+    flag_char
+}
+
+fn huge_flag(flag: &Option<&str>) -> String {
+    let flag_char = flag
+        .map(|f| format!("{:>2} ", f))
+        .unwrap_or("---".to_string());
+    flag_char
+}
+
+fn huge_flag_string(flag: &Option<String>) -> String {
+    let flag_char = flag
+        .clone()
+        .map(|f| format!("{:>2} ", f))
+        .unwrap_or("---".to_string());
     flag_char
 }
 
@@ -99,10 +122,12 @@ pub enum SlotState {
     Device {
         group_key: String,
         content: String,
-        end_flag_char: Option<&'static str>,
+        prefix: Option<String>,
+        suffix: Option<&'static str>,
     },
     Empty {
-        end_flag_char: Option<&'static str>,
+        prefix: Option<String>,
+        suffix: Option<&'static str>,
     },
 }
 
