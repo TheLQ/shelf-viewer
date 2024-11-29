@@ -6,7 +6,10 @@ use std::{
 
 use crate::{
     err::{io_op, io_op_magic, SError, SResult},
-    utils::{read_dir_with_single_file, read_to_string_trim},
+    utils::{
+        into_not_found_option_or_panic_io, into_not_found_option_or_panic_s,
+        read_dir_with_single_file, read_to_string_trim,
+    },
 };
 
 const ENCLOSURE_DIR: &str = "/sys/class/enclosure";
@@ -84,29 +87,31 @@ pub struct Slot {
 }
 
 impl Slot {
-    pub fn block_device_sys(&self) -> Option<PathBuf> {
+    pub fn block_path(&self) -> Option<PathBuf> {
         let block_root_dir = self.files(&["device", "block"]);
-        match read_dir_with_single_file(&block_root_dir) {
-            Ok(block_dir) => Some(block_dir),
-            Err(SError::Io { err, .. }) if err.kind() == ErrorKind::NotFound => None,
-            Err(e) => panic!("fail block device {} {}", block_root_dir.display(), e),
-        }
+        into_not_found_option_or_panic_s(
+            &block_root_dir,
+            read_dir_with_single_file(&block_root_dir),
+        )
     }
 
-    pub fn block_device_name(&self) -> Option<String> {
-        self.block_device_sys().map(|block_device_sys| {
-            let os_name = block_device_sys.file_name().unwrap();
-            os_name.to_str().unwrap().to_string()
-        })
+    pub fn block_name(&self) -> Option<String> {
+        let block_device_sys = self.block_path()?;
+        let os_name = block_device_sys.file_name().unwrap();
+        Some(os_name.to_str().unwrap().to_string())
+    }
+
+    pub fn device_wwid(&self) -> Option<String> {
+        let path = self.files(&["device", "wwid"]);
+        into_not_found_option_or_panic_io(&path, read_to_string_trim(&path))
     }
 
     pub fn is_locating(&self) -> bool {
         let path: PathBuf = self.file("locate");
-        match read_to_string(&path) {
-            Ok(content) => content.trim() == "1",
-            // enclosure doesn't support locating
-            Err(e) if e.kind() == ErrorKind::NotFound => false,
-            Err(e) => panic!("fail readling locate {} {}", path.display(), e),
+        let read = into_not_found_option_or_panic_io(&path, read_to_string_trim(&path));
+        match read {
+            Some(content) if content == "1" => true,
+            _ => false,
         }
     }
 }

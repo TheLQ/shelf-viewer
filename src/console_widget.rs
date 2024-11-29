@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use crate::colors::{ColorMap, ASCII_RESET};
 
 pub struct ConsoleViewer {
@@ -12,27 +14,41 @@ const U_LEFT_ONE_EIGHTH_BLOCK: &str = "\u{258F}";
 
 pub const ALERT_LOCATING: &str = "🚨";
 
+const PADDING_PREFIX: usize = 4;
+const PADDING_SUFFIX: usize = 2;
+
 impl ConsoleViewer {
     pub fn print(&self, states: &[SlotState]) {
         let mut cell_start_width = 0;
         let mut cell_end_width = 0;
+        let mut cell_lines = 0;
         for state in states {
             let SlotLabel {
                 content_start,
                 content_end,
                 ..
             } = state.label();
-            cell_start_width = cell_start_width.max(content_start.len());
+
+            let lines_width_max = state.lines().iter().map(|v| v.line.len()).max().unwrap();
+
+            cell_start_width = cell_start_width
+                .max(content_start.len())
+                .max(lines_width_max);
             cell_end_width = cell_end_width.max(content_end.len());
+            cell_lines = state.lines().len();
         }
         // anti squish
         cell_start_width += 1;
         cell_end_width += 1;
+        let cell_content_width = cell_start_width + cell_end_width;
+        println!(
+            "{} + {} = {}",
+            cell_start_width, cell_end_width, cell_content_width
+        );
+        // let cell_total_width =  + PADDING_PREFIX + PADDING_SUFFIX;
 
         let row_sep = U_LOWER_ONE_EIGHTH_BLOCK
-            .repeat(
-                cell_start_width + cell_end_width + 1/*cols*/ + 3 /*prefix*/ + 2, /*suffix*/
-            )
+            .repeat(cell_content_width + 1 /*cols*/ + PADDING_PREFIX + PADDING_SUFFIX)
             .repeat(self.width);
         let row_char_len = row_sep.chars().count();
         let column_sep = U_LEFT_ONE_EIGHTH_BLOCK;
@@ -47,24 +63,35 @@ impl ConsoleViewer {
             output.push_str(&format!("{:-^row_char_len$}", title,));
         }
 
+        let mut slot_line_buffer: Vec<String> = vec!["".to_string(); cell_lines];
+
+        println!("with cell {}", cell_lines);
         for (i, slot) in self
             .slot_order
             .order(states.len(), self.width)
             .iter()
             .enumerate()
         {
+            let slot = &states[*slot];
+
             if i % self.width == 0 {
                 if i != 0 {
                     output.push_str(&column_sep);
                 }
                 output.push('\n');
+
+                if i != 0 {
+                    append_lines(slot_line_buffer, &mut output, column_sep);
+                }
+
+                slot_line_buffer = vec!["".to_string(); cell_lines];
+
                 output.push_str(&row_sep);
                 output.push('\n');
             }
             output.push_str(&column_sep);
 
-            let slot = &states[*slot];
-            let label_color = if let SlotState::Device(group_key, _) = &slot {
+            let label_color = if let SlotState::Device(group_key, _, _) = &slot {
                 pool_colors.get_color(group_key.as_str())
             } else {
                 ""
@@ -80,49 +107,54 @@ impl ConsoleViewer {
             output.push_str(&format!(
                 "{}{}{:cell_start_width$}{:>cell_end_width$}{}{}",
                 label_color,
-                huge_flag_string(prefix),
+                huge_flag(prefix, PADDING_PREFIX),
                 content_start,
                 content_end,
-                wide_flag(suffix),
+                huge_flag_str(suffix, PADDING_SUFFIX),
                 ASCII_RESET
             ));
+
+            // wheee
+            for line_num in 0..cell_lines {
+                let line = &mut slot_line_buffer[line_num];
+                line.push_str(&column_sep);
+
+                let content = &slot.lines().get(line_num).unwrap().line;
+
+                line.push_str(&format!(
+                    "{}{:PADDING_PREFIX$}{:<cell_content_width$}{:PADDING_SUFFIX$}{}",
+                    label_color, "", content, "", ASCII_RESET
+                ));
+            }
         }
         output.push('\n');
+        append_lines(slot_line_buffer, &mut output, column_sep);
+
         output.push_str(&row_sep);
 
         println!("{}", output);
     }
 }
 
-fn wide_flag(flag: &Option<&str>) -> String {
-    let flag_char = flag.map(|f| f.to_string()).unwrap_or("  ".to_string());
-    flag_char
+fn append_lines(slot_line_buffer: Vec<String>, output: &mut String, column_sep: &str) {
+    for line in slot_line_buffer {
+        output.push_str(&line);
+        output.push_str(column_sep);
+        output.push('\n');
+    }
 }
 
-fn wide_flag_string(flag: &Option<String>) -> String {
-    let flag_char = flag.clone().unwrap_or("  ".to_string());
-    flag_char
-}
-
-fn huge_flag(flag: &Option<&str>) -> String {
+fn huge_flag(flag: impl Borrow<Option<String>>, padding: usize) -> String {
     let flag_char = flag
-        .map(|f| format!("{:>2} ", f))
-        .unwrap_or("---".to_string());
+        .borrow()
+        .as_ref()
+        .map(|f| format!("{:>padding$}", f))
+        .unwrap_or(" ".repeat(padding));
     flag_char
 }
 
-fn huge_flag_string(flag: &Option<String>) -> String {
-    let flag_char = flag
-        .clone()
-        .map(|f| format!("{:>2} ", f))
-        .unwrap_or("---".to_string());
-    flag_char
-}
-
-fn single_flag<'a>(flag: &Option<&'a str>) -> &'a str {
-    let flag_char = flag.unwrap_or("-");
-    assert_eq!(flag_char.chars().count(), 1, "too long {}", flag_char);
-    flag_char
+fn huge_flag_str(flag: &Option<&str>, padding: usize) -> String {
+    huge_flag(flag.clone().map(|v| v.to_string()), padding)
 }
 
 #[derive(PartialEq)]
@@ -136,6 +168,20 @@ impl SlotState {
         match self {
             Self::Device(_, label, _) => label,
             Self::Empty(label, _) => label,
+        }
+    }
+
+    pub fn lines(&self) -> &Vec<SlotLine> {
+        match self {
+            Self::Device(_, _, labels) => labels,
+            Self::Empty(_, labels) => labels,
+        }
+    }
+
+    pub fn lines_mut(&mut self) -> &mut Vec<SlotLine> {
+        match self {
+            Self::Device(_, _, labels) => labels,
+            Self::Empty(_, labels) => labels,
         }
     }
 }

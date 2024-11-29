@@ -3,7 +3,9 @@
 use std::env::args;
 
 use shelf_viewer::{
-    console_widget::{ConsoleViewer, SlotLabel, SlotPrintOrder, SlotState, ALERT_LOCATING},
+    console_widget::{
+        ConsoleViewer, SlotLabel, SlotLine, SlotPrintOrder, SlotState, ALERT_LOCATING,
+    },
     enclosure::{Enclosure, Slot},
     err::SResult,
     zfs::ZfsList,
@@ -35,10 +37,10 @@ fn inner_main() -> SResult<()> {
             device_flag = Some(ALERT_LOCATING);
         }
 
-        let prefix = Some(slot_id.to_string());
+        let prefix = Some(format!("{} ", slot_id.to_string()));
 
         let mut slot_state;
-        if let Some(device) = slot.block_device_name() {
+        if let Some(device) = slot.block_name() {
             slot_state = SlotState::Device(
                 "__".to_string(),
                 SlotLabel {
@@ -47,28 +49,49 @@ fn inner_main() -> SResult<()> {
                     prefix,
                     suffix: device_flag,
                 },
+                Vec::new(),
             );
-            for pool in &zfs_list.pools {
+            'outer: for pool in &zfs_list.pools {
                 for vdev in &pool.vdevs {
                     if vdev.vdev_name == device {
                         let key = format!("ZFS {}", pool.pool_name);
-                        if let SlotState::Device(group_key, SlotLabel { content_start, .. }) =
+                        if let SlotState::Device(group_key, SlotLabel { content_start, .. }, _) =
                             &mut slot_state
                         {
                             *group_key = key.clone();
                             *content_start = key;
                         }
+                        break 'outer;
                     }
                 }
             }
         } else {
-            slot_state = SlotState::Empty(SlotLabel {
-                content_start: "".to_string(),
-                content_end: "Empty".to_string(),
-                prefix: prefix.clone(),
-                suffix: device_flag,
-            })
+            slot_state = SlotState::Empty(
+                SlotLabel {
+                    content_start: "".to_string(),
+                    content_end: "Empty".to_string(),
+                    prefix: prefix.clone(),
+                    suffix: device_flag,
+                },
+                Vec::new(),
+            )
         }
+
+        let is_wwid = true;
+
+        if is_wwid {
+            let wwid = slot.device_wwid().unwrap_or("no_wwid".to_string());
+            slot_state.lines_mut().push(SlotLine { line: wwid });
+        }
+
+        if is_wwid {
+            let wwid_file = slot
+                .device_wwid()
+                .unwrap_or("no_wid_file".to_string())
+                .replace("naa.", "wwn-0x");
+            slot_state.lines_mut().push(SlotLine { line: wwid_file });
+        }
+
         states.push(slot_state);
     }
 
