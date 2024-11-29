@@ -80,16 +80,32 @@ fn inner_main() -> SResult<()> {
         let is_wwid = true;
 
         if is_wwid {
-            let wwid = slot.device_wwid().unwrap_or("no_wwid".to_string());
-            slot_state.lines_mut().push(SlotLine { line: wwid });
+            let line = slot.device_wwid().unwrap_or("no_wwid".to_string());
+            slot_state.lines_mut().push(SlotLine { line });
         }
 
         if is_wwid {
-            let wwid_file = slot
+            let line = slot
                 .device_wwid()
                 .unwrap_or("no_wid_file".to_string())
                 .replace("naa.", "wwn-0x");
-            slot_state.lines_mut().push(SlotLine { line: wwid_file });
+            slot_state.lines_mut().push(SlotLine { line });
+        }
+
+        if is_wwid {
+            let line = slot
+                .device_vendor()
+                .unwrap_or("no_vendor_file".to_string())
+                .replace("naa.", "wwn-0x");
+            slot_state.lines_mut().push(SlotLine { line });
+        }
+
+        if is_wwid {
+            let line = slot
+                .device_model()
+                .unwrap_or("no_model_file".to_string())
+                .replace("naa.", "wwn-0x");
+            slot_state.lines_mut().push(SlotLine { line });
         }
 
         states.push(slot_state);

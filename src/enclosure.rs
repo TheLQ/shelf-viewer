@@ -106,6 +106,16 @@ impl Slot {
         into_not_found_option_or_panic_io(&path, read_to_string_trim(&path))
     }
 
+    pub fn device_vendor(&self) -> SResult<String> {
+        let path = self.files(&["device", "vendor"]);
+        io_op_magic(read_to_string_trim, &path)
+    }
+
+    pub fn device_model(&self) -> SResult<String> {
+        let path = self.files(&["device", "model"]);
+        io_op_magic(read_to_string_trim, &path)
+    }
+
     pub fn is_locating(&self) -> bool {
         let path: PathBuf = self.file("locate");
         let read = into_not_found_option_or_panic_io(&path, read_to_string_trim(&path));
