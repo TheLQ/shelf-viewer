@@ -1,6 +1,5 @@
 use std::{
     fs::{read_dir, read_to_string},
-    io::{self, ErrorKind},
     path::{Path, PathBuf},
 };
 

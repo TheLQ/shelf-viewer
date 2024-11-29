@@ -1,5 +1,6 @@
 use std::fs::read_to_string;
 use std::io::{self, ErrorKind};
+use std::process::Command;
 use std::{
     fs::{read_dir, DirEntry},
     path::{Path, PathBuf},
@@ -43,4 +44,26 @@ pub fn into_not_found_option_or_panic_io<V>(
         Err(err) if err.kind() == ErrorKind::NotFound => None,
         Err(err) => panic!("io {} {}", path.as_ref().display(), err),
     }
+}
+
+pub fn execute_command(
+    linux_command: &str,
+    args: impl IntoIterator<Item = impl AsRef<str>>,
+) -> String {
+    let mut command = Command::new("/usr/bin/env");
+
+    command.arg(linux_command);
+    for arg in args {
+        command.arg(arg.as_ref());
+    }
+    let out = command.output().expect("failed to start command");
+    assert!(
+        out.status.success(),
+        "bad status exit for {}",
+        linux_command
+    );
+    if !out.stderr.is_empty() {
+        panic!("stderr: {}", String::from_utf8(out.stderr).unwrap());
+    }
+    String::from_utf8(out.stdout).unwrap().trim().to_string()
 }

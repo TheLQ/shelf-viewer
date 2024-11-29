@@ -2,13 +2,16 @@
 
 use std::env::args;
 
+use num_format::ToFormattedString;
 use shelf_viewer::{
     console_widget::{
         ConsoleViewer, SlotLabel, SlotLine, SlotPrintOrder, SlotState, ALERT_LOCATING,
     },
-    enclosure::{Enclosure, Slot},
+    enclosure::Enclosure,
     err::SResult,
+    lsblk::Lsblk,
     zfs::ZfsList,
+    LOCALE,
 };
 
 fn main() {
@@ -27,6 +30,7 @@ fn inner_main() -> SResult<()> {
     println!("enclosure {:?} with {} slots", enclosure, slot_len);
 
     let zfs_list = ZfsList::execute();
+    let lsblk_list = Lsblk::execute();
 
     let mut states = Vec::with_capacity(slot_len);
     for slot_id in 0..slot_len {
@@ -105,6 +109,24 @@ fn inner_main() -> SResult<()> {
                 .device_model()
                 .unwrap_or("no_model_file".to_string())
                 .replace("naa.", "wwn-0x");
+            slot_state.lines_mut().push(SlotLine { line });
+        }
+
+        if is_wwid {
+            let entry = slot
+                .block_name()
+                .map(|block_name| lsblk_list.iter().find(|v| v.device == block_name))
+                .flatten();
+            let line = match entry {
+                Some(entry) => {
+                    let bytes: usize = entry.bytes.parse().unwrap();
+                    const GIGABYTE: usize = 1000usize.pow(3);
+
+                    let quantity = (bytes / GIGABYTE).to_formatted_string(LOCALE);
+                    format!("{} G", quantity)
+                }
+                None => "no_lsblk".to_string(),
+            };
             slot_state.lines_mut().push(SlotLine { line });
         }
 

@@ -1,23 +1,4 @@
-use std::process::Command;
-
-fn execute_command(linux_command: &str, args: impl IntoIterator<Item = impl AsRef<str>>) -> String {
-    let mut command = Command::new("/usr/bin/env");
-
-    command.arg(linux_command);
-    for arg in args {
-        command.arg(arg.as_ref());
-    }
-    let out = command.output().expect("failed to start command");
-    assert!(
-        out.status.success(),
-        "bad status exit for {}",
-        linux_command
-    );
-    if !out.stderr.is_empty() {
-        panic!("stderr: {}", String::from_utf8(out.stderr).unwrap());
-    }
-    String::from_utf8(out.stdout).unwrap().trim().to_string()
-}
+use crate::utils::execute_command;
 
 #[derive(Default)]
 pub struct ZfsList {
