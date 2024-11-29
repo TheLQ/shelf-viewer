@@ -46,6 +46,10 @@ impl Enclosure {
         Ok(enclosure)
     }
 
+    pub fn enc_id(&self) -> &str {
+        &self.enc_id
+    }
+
     pub fn slot_len(&self) -> SResult<usize> {
         let components_path = self.files(&["components"]);
         let slots = io_op_magic(read_to_string, &components_path)?;

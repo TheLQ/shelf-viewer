@@ -134,9 +134,10 @@ fn inner_main() -> SResult<()> {
     }
 
     let title = format!(
-        "{} {}",
+        "{} {} - {}",
         enclosure.device_vendor().unwrap_or("no_vendor".into()),
-        enclosure.device_model().unwrap_or("no_model".into())
+        enclosure.device_model().unwrap_or("no_model".into()),
+        enclosure.enc_id()
     );
 
     ConsoleViewer {
