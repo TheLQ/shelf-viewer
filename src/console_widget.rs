@@ -148,7 +148,15 @@ fn huge_flag(flag: impl Borrow<Option<String>>, padding: usize) -> String {
     let flag_char = flag
         .borrow()
         .as_ref()
-        .map(|f| format!("{:>padding$}", f))
+        .map(|f| {
+            let first_char: char = f.chars().next().unwrap();
+            if !first_char.is_ascii_alphanumeric() {
+                // emojiis are extra big
+                f.to_string()
+            } else {
+                format!("{:>padding$}", f)
+            }
+        })
         .unwrap_or(" ".repeat(padding));
     flag_char
 }
