@@ -3,8 +3,8 @@
 use std::env::args;
 
 use shelf_viewer::{
-    console_widget::{ConsoleViewer, SlotPrintOrder, SlotState, ALERT_LOCATING},
-    enclosure::Enclosure,
+    console_widget::{ConsoleViewer, SlotLabel, SlotPrintOrder, SlotState, ALERT_LOCATING},
+    enclosure::{Enclosure, Slot},
     err::SResult,
     zfs::ZfsList,
 };
@@ -37,37 +37,40 @@ fn inner_main() -> SResult<()> {
 
         let prefix = Some(slot_id.to_string());
 
+        let mut slot_state;
         if let Some(device) = slot.block_device_name() {
-            let mut message = None;
+            slot_state = SlotState::Device(
+                "__".to_string(),
+                SlotLabel {
+                    content_start: "__".to_string(),
+                    content_end: device.clone(),
+                    prefix,
+                    suffix: device_flag,
+                },
+            );
             for pool in &zfs_list.pools {
                 for vdev in &pool.vdevs {
                     if vdev.vdev_name == device {
-                        message = Some(SlotState::Device {
-                            group_key: format!("ZFS {}", pool.pool_name),
-                            content: format!("ZFS {} - {}", pool.pool_name, vdev.vdev_name),
-                            prefix: prefix.clone(),
-                            suffix: device_flag,
-                        });
+                        let key = format!("ZFS {}", pool.pool_name);
+                        if let SlotState::Device(group_key, SlotLabel { content_start, .. }) =
+                            &mut slot_state
+                        {
+                            *group_key = key.clone();
+                            *content_start = key;
+                        }
                     }
                 }
             }
-            if message == None {
-                message = Some(SlotState::Device {
-                    group_key: "___".to_string(),
-                    content: format!("___ {}", device),
-                    prefix,
-                    suffix: device_flag,
-                })
-            }
-            states.push(message.unwrap())
         } else {
-            states.push(SlotState::Empty {
-                prefix,
+            slot_state = SlotState::Empty(SlotLabel {
+                content_start: "".to_string(),
+                content_end: "Empty".to_string(),
+                prefix: prefix.clone(),
                 suffix: device_flag,
             })
         }
+        states.push(slot_state);
     }
-    println!("states {}", states.len());
 
     let title = format!(
         "{} {}",

@@ -12,12 +12,27 @@ const U_LEFT_ONE_EIGHTH_BLOCK: &str = "\u{258F}";
 
 pub const ALERT_LOCATING: &str = "🚨";
 
-const CELL_WIDTH: usize = 21;
-
 impl ConsoleViewer {
     pub fn print(&self, states: &[SlotState]) {
+        let mut cell_start_width = 0;
+        let mut cell_end_width = 0;
+        for state in states {
+            let SlotLabel {
+                content_start,
+                content_end,
+                ..
+            } = state.label();
+            cell_start_width = cell_start_width.max(content_start.len());
+            cell_end_width = cell_end_width.max(content_end.len());
+        }
+        // anti squish
+        cell_start_width += 1;
+        cell_end_width += 1;
+
         let row_sep = U_LOWER_ONE_EIGHTH_BLOCK
-            .repeat(CELL_WIDTH + 1/*cols*/ + 3 /*prefix*/ + 2 /*suffix*/)
+            .repeat(
+                cell_start_width + cell_end_width + 1/*cols*/ + 3 /*prefix*/ + 2, /*suffix*/
+            )
             .repeat(self.width);
         let row_char_len = row_sep.chars().count();
         let column_sep = U_LEFT_ONE_EIGHTH_BLOCK;
@@ -48,36 +63,29 @@ impl ConsoleViewer {
             }
             output.push_str(&column_sep);
 
-            if *slot > 23 {
-                println!("skippp {}", i);
-                continue;
-            }
-            match &states[*slot] {
-                SlotState::Device {
-                    group_key,
-                    content,
+            let slot = &states[*slot];
+            let label_color = if let SlotState::Device(group_key, _) = &slot {
+                pool_colors.get_color(group_key.as_str())
+            } else {
+                ""
+            };
 
-                    prefix,
-                    suffix,
-                } => {
-                    let device_color = pool_colors.get_color(group_key.as_str());
+            let SlotLabel {
+                content_start,
+                content_end,
+                prefix,
+                suffix,
+            } = slot.label();
 
-                    output.push_str(&format!(
-                        "{}{}{:CELL_WIDTH$}{}{}",
-                        device_color,
-                        huge_flag_string(prefix),
-                        content,
-                        wide_flag(suffix),
-                        ASCII_RESET
-                    ))
-                }
-                SlotState::Empty { prefix, suffix } => output.push_str(&format!(
-                    "{}{:CELL_WIDTH$}{}",
-                    huge_flag_string(prefix),
-                    "Empty",
-                    wide_flag(suffix),
-                )),
-            }
+            output.push_str(&format!(
+                "{}{}{:cell_start_width$}{:>cell_end_width$}{}{}",
+                label_color,
+                huge_flag_string(prefix),
+                content_start,
+                content_end,
+                wide_flag(suffix),
+                ASCII_RESET
+            ));
         }
         output.push('\n');
         output.push_str(&row_sep);
@@ -119,16 +127,31 @@ fn single_flag<'a>(flag: &Option<&'a str>) -> &'a str {
 
 #[derive(PartialEq)]
 pub enum SlotState {
-    Device {
-        group_key: String,
-        content: String,
-        prefix: Option<String>,
-        suffix: Option<&'static str>,
-    },
-    Empty {
-        prefix: Option<String>,
-        suffix: Option<&'static str>,
-    },
+    Device(String, SlotLabel, Vec<SlotLine>),
+    Empty(SlotLabel, Vec<SlotLine>),
+}
+
+impl SlotState {
+    fn label(&self) -> &SlotLabel {
+        match self {
+            Self::Device(_, label, _) => label,
+            Self::Empty(label, _) => label,
+        }
+    }
+}
+
+#[derive(PartialEq)]
+
+pub struct SlotLabel {
+    pub content_start: String,
+    pub content_end: String,
+    pub prefix: Option<String>,
+    pub suffix: Option<&'static str>,
+}
+
+#[derive(PartialEq)]
+pub struct SlotLine {
+    pub line: String,
 }
 
 pub enum SlotPrintOrder {
@@ -166,13 +189,13 @@ impl SlotPrintOrder {
                 }
             }
         }
-        println!(
-            "res {}",
-            res.iter()
-                .map(|v| v.to_string())
-                .collect::<Vec<String>>()
-                .join(",")
-        );
+        // println!(
+        //     "res {}",
+        //     res.iter()
+        //         .map(|v| v.to_string())
+        //         .collect::<Vec<String>>()
+        //         .join(",")
+        // );
         res
     }
 
