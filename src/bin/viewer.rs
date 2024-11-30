@@ -110,16 +110,33 @@ fn inner_main() -> SResult<()> {
         }
 
         if is_wwid {
-            let line;
-            if let Some(bytes_str) = slot.block_size() {
-                let bytes: usize = bytes_str.parse().expect(&bytes_str);
-                const GIGABYTE: usize = 4096;
-                let quantity = (bytes).to_formatted_string(LOCALE);
-                line = format!("{} G", quantity)
-            } else {
-                line = "no_size_file".into();
-            }
+            let entry = slot
+                .block_name()
+                .map(|block_name| lsblk_list.iter().find(|v| v.device == block_name))
+                .flatten();
+            let line = match entry {
+                Some(entry) => {
+                    let bytes: usize = entry.bytes.parse().unwrap();
+                    const GIGABYTE: usize = 1000usize.pow(3);
+
+                    let quantity = (bytes / GIGABYTE).to_formatted_string(LOCALE);
+                    format!("{} G", quantity)
+                }
+                None => "no_lsblk".into(),
+            };
             slot_state.lines_mut().push(SlotLine { line });
+            // todo: this is some percent off
+            // let line;
+            // if let Some(bytes_str) = slot.block_size() {
+            //     let bytes: usize = bytes_str.parse().expect(&bytes_str);
+            //     // 512 even on 4kn drives
+            //     let disk_block_size: usize = 512;
+            //     const GIGABYTE: usize = 1024usize.pow(3);
+            //     let quantity = (bytes * disk_block_size / GIGABYTE).to_formatted_string(LOCALE);
+            //     line = format!("{} G", quantity)
+            // } else {
+            //     line = "no_size_file".into();
+            // }
         }
 
         states.push(slot_state);
