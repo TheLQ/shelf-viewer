@@ -243,13 +243,6 @@ impl SlotPrintOrder {
                 }
             }
         }
-        // println!(
-        //     "res {}",
-        //     res.iter()
-        //         .map(|v| v.to_string())
-        //         .collect::<Vec<String>>()
-        //         .join(",")
-        // );
         res
     }
 
@@ -258,5 +251,56 @@ impl SlotPrintOrder {
             SlotPrintOrder::TopLeftGoingDown => "TopLeftGoingDown",
             SlotPrintOrder::BottomLeftGoingUp => "BottomLeftGoingUp",
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::SlotPrintOrder;
+
+    #[test]
+    fn test_going_down() {
+        assert_eq!(
+            SlotPrintOrder::TopLeftGoingDown.order(4, 2),
+            shelf([
+                [0, 2], //
+                [1, 3]  //
+            ]),
+            "4,2"
+        );
+        assert_eq!(
+            SlotPrintOrder::TopLeftGoingDown.order(9, 3),
+            shelf([
+                [0, 3, 6], //
+                [1, 4, 7], //
+                [2, 5, 8]  //
+            ]),
+            "9,3"
+        );
+    }
+
+    #[test]
+    fn test_going_up() {
+        assert_eq!(
+            SlotPrintOrder::BottomLeftGoingUp.order(4, 2),
+            shelf([
+                [1, 3], //
+                [0, 2]  //
+            ]),
+            "4,2"
+        );
+        assert_eq!(
+            SlotPrintOrder::BottomLeftGoingUp.order(9, 3),
+            shelf([
+                [2, 5, 8], //
+                [1, 4, 7], //
+                [0, 3, 6]  //
+            ]),
+            "9,3"
+        );
+    }
+
+    fn shelf<const X: usize, const Y: usize>(order: [[usize; X]; Y]) -> Vec<usize> {
+        order.into_iter().flatten().collect()
     }
 }
