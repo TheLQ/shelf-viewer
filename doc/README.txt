@@ -1,0 +1,1 @@
+1x zoom out vscode in terminal

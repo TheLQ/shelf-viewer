@@ -29,7 +29,12 @@ impl ConsoleViewer {
                 ..
             } = state.label();
 
-            let lines_width_max = state.lines().iter().map(|v| v.line.len()).max().unwrap();
+            let lines_width_max = state
+                .lines()
+                .iter()
+                .map(|v| v.line.len())
+                .max()
+                .unwrap_or(0);
 
             cell_start_width = cell_start_width
                 .max(content_start.len())

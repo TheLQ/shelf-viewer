@@ -1,10 +1,13 @@
 Shelf Viewer
 ---
 
-Displays your Disk Shelf as it looks physically.
-Similar to BMC GUIs.
+Displays your Disk Shelf / JBOD as it looks physically.
+Like BMC GUIs.
 
-* Displays Linux `/sys/enclosure`
+* Reads Linux `/sys/enclosure`
 * Supports ZFS zpool
-* Add wwn, disk size, 
+* Add wwn, disk size, model, locate light
 
+![running in terminal with all optional slot info](doc/screenshot_big.png)
+
+![running in terminal in without options](doc/screenshot_small.png)

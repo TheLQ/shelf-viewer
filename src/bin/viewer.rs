@@ -140,7 +140,7 @@ fn inner_main() -> SResult<()> {
         states.push(slot_state);
     }
 
-    let presentation_mode = true;
+    let presentation_mode = false;
     if presentation_mode {
         for slot_state in &mut states {
             for line in slot_state.lines_mut() {
