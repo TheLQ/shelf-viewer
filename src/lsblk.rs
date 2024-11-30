@@ -17,6 +17,7 @@ impl Lsblk {
         );
         let mut entries = Vec::new();
         for line in res.split("\n") {
+            // expect alphanumeric device names
             let (device, bytes) = line.split_at(line.chars().position(|c| c == ' ').unwrap());
             entries.push(LsblkEntry {
                 device: device.to_string(),

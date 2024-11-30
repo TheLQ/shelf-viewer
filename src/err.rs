@@ -46,11 +46,11 @@ pub fn io_op<T>(source: io::Result<T>, path: impl AsRef<Path>) -> SResult<T> {
     source.map_err(SError::io(path.as_ref().to_path_buf()))
 }
 
-pub fn io_op_magic<T, S, SP>(source: S, path: SP) -> SResult<T>
+pub fn io_op_call<T, S, SP>(source: S, path: SP) -> SResult<T>
 where
     S: Fn(SP) -> io::Result<T>,
     SP: AsRef<Path>,
 {
-    let my_path = path.as_ref().to_path_buf();
-    source(path).map_err(SError::io(my_path))
+    let err_path = path.as_ref().to_path_buf();
+    source(path).map_err(SError::io(err_path))
 }

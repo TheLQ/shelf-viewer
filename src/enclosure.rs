@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    err::{io_op, io_op_magic, SError, SResult},
+    err::{io_op, io_op_call, SError, SResult},
     utils::{
         into_not_found_option_or_panic_io, into_not_found_option_or_panic_s,
         read_dir_with_single_file, read_to_string_trim,
@@ -26,7 +26,7 @@ impl Enclosure {
     }
 
     fn find_only_enclosure_id() -> SResult<String> {
-        let read = io_op_magic(read_dir, ENCLOSURE_DIR)?;
+        let read = io_op_call(read_dir, ENCLOSURE_DIR)?;
         let enclosures: SResult<Vec<String>> = read
             .map(|file| {
                 let file = io_op(file, ENCLOSURE_DIR)?;
@@ -52,7 +52,7 @@ impl Enclosure {
 
     pub fn slot_len(&self) -> SResult<usize> {
         let components_path = self.files(&["components"]);
-        let slots = io_op_magic(read_to_string, &components_path)?;
+        let slots = io_op_call(read_to_string, &components_path)?;
         Ok(slots.trim().parse().map_err(|_| SError::ComponentsNaN {
             path: components_path,
         })?)
@@ -67,12 +67,12 @@ impl Enclosure {
 
     pub fn device_vendor(&self) -> SResult<String> {
         let path = self.files(&["device", "vendor"]);
-        io_op_magic(read_to_string_trim, &path)
+        io_op_call(read_to_string_trim, &path)
     }
 
     pub fn device_model(&self) -> SResult<String> {
         let path = self.files(&["device", "model"]);
-        io_op_magic(read_to_string_trim, &path)
+        io_op_call(read_to_string_trim, &path)
     }
 }
 
@@ -104,6 +104,11 @@ impl Slot {
         Some(os_name.to_str().unwrap().to_string())
     }
 
+    pub fn block_size(&self) -> Option<String> {
+        let path = self.block_path()?.join("size");
+        into_not_found_option_or_panic_io(&path, read_to_string_trim(&path))
+    }
+
     pub fn device_wwid(&self) -> Option<String> {
         let path = self.files(&["device", "wwid"]);
         into_not_found_option_or_panic_io(&path, read_to_string_trim(&path))
@@ -111,12 +116,12 @@ impl Slot {
 
     pub fn device_vendor(&self) -> SResult<String> {
         let path = self.files(&["device", "vendor"]);
-        io_op_magic(read_to_string_trim, &path)
+        io_op_call(read_to_string_trim, &path)
     }
 
     pub fn device_model(&self) -> SResult<String> {
         let path = self.files(&["device", "model"]);
-        io_op_magic(read_to_string_trim, &path)
+        io_op_call(read_to_string_trim, &path)
     }
 
     pub fn is_locating(&self) -> bool {

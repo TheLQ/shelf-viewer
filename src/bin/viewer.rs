@@ -84,14 +84,14 @@ fn inner_main() -> SResult<()> {
         let is_wwid = true;
 
         if is_wwid {
-            let line = slot.device_wwid().unwrap_or("no_wwid".to_string());
+            let line = slot.device_wwid().unwrap_or("no_wwid".into());
             slot_state.lines_mut().push(SlotLine { line });
         }
 
         if is_wwid {
             let line = slot
                 .device_wwid()
-                .unwrap_or("no_wid_file".to_string())
+                .unwrap_or("no_wid_file".into())
                 .replace("naa.", "wwn-0x");
             slot_state.lines_mut().push(SlotLine { line });
         }
@@ -99,34 +99,26 @@ fn inner_main() -> SResult<()> {
         if is_wwid {
             let line = slot
                 .device_vendor()
-                .unwrap_or("no_vendor_file".to_string())
+                .unwrap_or("no_vendor_file".into())
                 .replace("naa.", "wwn-0x");
             slot_state.lines_mut().push(SlotLine { line });
         }
 
         if is_wwid {
-            let line = slot
-                .device_model()
-                .unwrap_or("no_model_file".to_string())
-                .replace("naa.", "wwn-0x");
+            let line = slot.device_model().unwrap_or("no_model_file".into());
             slot_state.lines_mut().push(SlotLine { line });
         }
 
         if is_wwid {
-            let entry = slot
-                .block_name()
-                .map(|block_name| lsblk_list.iter().find(|v| v.device == block_name))
-                .flatten();
-            let line = match entry {
-                Some(entry) => {
-                    let bytes: usize = entry.bytes.parse().unwrap();
-                    const GIGABYTE: usize = 1000usize.pow(3);
-
-                    let quantity = (bytes / GIGABYTE).to_formatted_string(LOCALE);
-                    format!("{} G", quantity)
-                }
-                None => "no_lsblk".to_string(),
-            };
+            let line;
+            if let Some(bytes_str) = slot.block_size() {
+                let bytes: usize = bytes_str.parse().expect(&bytes_str);
+                const GIGABYTE: usize = 4096;
+                let quantity = (bytes).to_formatted_string(LOCALE);
+                line = format!("{} G", quantity)
+            } else {
+                line = "no_size_file".into();
+            }
             slot_state.lines_mut().push(SlotLine { line });
         }
 

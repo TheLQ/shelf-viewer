@@ -6,10 +6,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::err::{io_op_magic, SError, SResult};
+use crate::err::{io_op_call, SError, SResult};
 
 pub fn read_dir_with_single_file(dir: impl AsRef<Path>) -> SResult<PathBuf> {
-    let mut files: Vec<io::Result<DirEntry>> = io_op_magic(read_dir, &dir)?.collect();
+    let mut files: Vec<io::Result<DirEntry>> = io_op_call(read_dir, &dir)?.collect();
     assert_eq!(
         files.len(),
         1,
@@ -41,7 +41,10 @@ pub fn into_not_found_option_or_panic_io<V>(
 ) -> Option<V> {
     match result {
         Ok(v) => Some(v),
-        Err(err) if err.kind() == ErrorKind::NotFound => None,
+        Err(err) if err.kind() == ErrorKind::NotFound => {
+            println!("[E] not found {}", path.as_ref().display());
+            None
+        }
         Err(err) => panic!("io {} {}", path.as_ref().display(), err),
     }
 }
