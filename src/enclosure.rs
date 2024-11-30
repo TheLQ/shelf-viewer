@@ -19,13 +19,14 @@ pub struct Enclosure {
 }
 
 impl Enclosure {
-    pub fn load_only() -> SResult<Self> {
-        Ok(Self {
-            enc_id: Self::find_only_enclosure_id()?,
-        })
+    pub fn load_all() -> SResult<Vec<Self>> {
+        Ok(Self::find_enclosure_ids()?
+            .into_iter()
+            .map(|enc_id| Self { enc_id })
+            .collect())
     }
 
-    fn find_only_enclosure_id() -> SResult<String> {
+    fn find_enclosure_ids() -> SResult<Vec<String>> {
         let read = io_op_call(read_dir, ENCLOSURE_DIR)?;
         let enclosures: SResult<Vec<String>> = read
             .map(|file| {
@@ -33,17 +34,12 @@ impl Enclosure {
                 SResult::Ok(file.file_name().to_string_lossy().to_string())
             })
             .collect();
-        let mut enclosures = enclosures?;
-
+        let enclosures = enclosures?;
         if enclosures.is_empty() {
-            return Err(SError::NoEnclosuresFound);
+            Err(SError::NoEnclosuresFound)
+        } else {
+            Ok(enclosures)
         }
-        if enclosures.len() != 1 {
-            return Err(SError::MoreThanOneEnclosureFound);
-        }
-
-        let enclosure = enclosures.pop().unwrap();
-        Ok(enclosure)
     }
 
     pub fn enc_id(&self) -> &str {

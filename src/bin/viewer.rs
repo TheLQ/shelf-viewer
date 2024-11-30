@@ -9,7 +9,7 @@ use shelf_viewer::{
     },
     enclosure::Enclosure,
     err::SResult,
-    lsblk::Lsblk,
+    lsblk::{Lsblk, LsblkEntry},
     zfs::ZfsList,
     LOCALE,
 };
@@ -23,14 +23,26 @@ fn inner_main() -> SResult<()> {
 
     let args: Vec<String> = args().collect();
     println!("args {}", args.join(","));
-    let width: usize = args[1].parse().expect("missing width arg");
-
-    let enclosure = Enclosure::load_only()?;
-    let slot_len = enclosure.slot_len().unwrap();
-    println!("enclosure {:?} with {} slots", enclosure, slot_len);
+    let width: usize = args[1].parse().expect("need width arg");
 
     let zfs_list = ZfsList::execute();
     let lsblk_list = Lsblk::execute();
+
+    for enclosure in Enclosure::load_all()? {
+        load_enclosure(enclosure, width, &zfs_list, &lsblk_list);
+    }
+
+    Ok(())
+}
+
+fn load_enclosure(
+    enclosure: Enclosure,
+    width: usize,
+    zfs_list: &ZfsList,
+    lsblk_list: &[LsblkEntry],
+) {
+    let slot_len = enclosure.slot_len().unwrap();
+    println!("enclosure {:?} with {} slots", enclosure, slot_len);
 
     let mut states = Vec::with_capacity(slot_len);
     for slot_id in 0..slot_len {
@@ -191,8 +203,6 @@ fn inner_main() -> SResult<()> {
         slot_order: SlotPrintOrder::BottomLeftGoingUp,
     }
     .print(&states);
-
-    Ok(())
 }
 
 const ENABLE_NOT_FOUND: bool = false;
