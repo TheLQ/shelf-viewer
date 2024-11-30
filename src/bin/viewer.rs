@@ -84,28 +84,26 @@ fn inner_main() -> SResult<()> {
         let is_wwid = true;
 
         if is_wwid {
-            let line = slot.device_wwid().unwrap_or("no_wwid".into());
+            let line = slot.device_wwid().unwrap_or(not_found("no_wwid"));
             slot_state.lines_mut().push(SlotLine { line });
         }
 
         if is_wwid {
             let line = slot
                 .device_wwid()
-                .unwrap_or("no_wid_file".into())
+                .unwrap_or(not_found("no_wid_file"))
                 .replace("naa.", "wwn-0x");
             slot_state.lines_mut().push(SlotLine { line });
         }
 
-        if is_wwid {
-            let line = slot
-                .device_vendor()
-                .unwrap_or("no_vendor_file".into())
-                .replace("naa.", "wwn-0x");
-            slot_state.lines_mut().push(SlotLine { line });
-        }
+        // Always ATA
+        // if is_wwid {
+        //     let line = slot.device_vendor().unwrap_or(not_found("no_vendor_file"));
+        //     slot_state.lines_mut().push(SlotLine { line });
+        // }
 
         if is_wwid {
-            let line = slot.device_model().unwrap_or("no_model_file".into());
+            let line = slot.device_model().unwrap_or(not_found("no_model_file"));
             slot_state.lines_mut().push(SlotLine { line });
         }
 
@@ -122,7 +120,7 @@ fn inner_main() -> SResult<()> {
                     let quantity = (bytes / GIGABYTE).to_formatted_string(LOCALE);
                     format!("{} G", quantity)
                 }
-                None => "no_lsblk".into(),
+                None => not_found("no_lsblk"),
             };
             slot_state.lines_mut().push(SlotLine { line });
             // todo: this is some percent off
@@ -142,10 +140,48 @@ fn inner_main() -> SResult<()> {
         states.push(slot_state);
     }
 
+    let presentation_mode = true;
+    if presentation_mode {
+        for slot_state in &mut states {
+            for line in slot_state.lines_mut() {
+                if line.line.ends_with(" G") {
+                    continue;
+                }
+
+                const BLANKING: usize = 8;
+                let line_len = line.line.len();
+                let blanking = BLANKING.min(line_len);
+                line.line
+                    .replace_range((line_len - blanking)..(line_len), &"0".repeat(blanking));
+                println!("{}", line.line);
+            }
+        }
+
+        let mut bad_pools: Vec<String> = Vec::new();
+        for state in &mut states {
+            let bad_name = &mut state.label_mut().content_start;
+            if !bad_name.starts_with("ZFS") {
+                continue;
+            }
+            let safe_pos = match bad_pools.iter().position(|p| p == bad_name) {
+                Some(p) => p,
+                None => {
+                    bad_pools.push(bad_name.clone());
+                    bad_pools.len() - 1
+                }
+            };
+            *bad_name = format!("ZFS pool{}", safe_pos);
+        }
+
+        let mut labels_to_edit: Vec<&SlotLabel> = states.iter().map(|e| e.label()).collect();
+        labels_to_edit.sort_by_key(|l| &l.content_start);
+        labels_to_edit.dedup();
+    }
+
     let title = format!(
         "{} {} - {}",
-        enclosure.device_vendor().unwrap_or("no_vendor".into()),
-        enclosure.device_model().unwrap_or("no_model".into()),
+        enclosure.device_vendor().unwrap_or(not_found("no_vendor")),
+        enclosure.device_model().unwrap_or(not_found("no_model")),
         enclosure.enc_id()
     );
 
@@ -157,4 +193,14 @@ fn inner_main() -> SResult<()> {
     .print(&states);
 
     Ok(())
+}
+
+const ENABLE_NOT_FOUND: bool = false;
+
+fn not_found(msg: &str) -> String {
+    if ENABLE_NOT_FOUND {
+        msg.into()
+    } else {
+        "".into()
+    }
 }

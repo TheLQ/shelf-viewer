@@ -127,6 +127,7 @@ impl ConsoleViewer {
                 ));
             }
         }
+        output.push_str(&column_sep);
         output.push('\n');
         append_lines(slot_line_buffer, &mut output, column_sep);
 
@@ -172,7 +173,14 @@ pub enum SlotState {
 }
 
 impl SlotState {
-    fn label(&self) -> &SlotLabel {
+    pub fn label(&self) -> &SlotLabel {
+        match self {
+            Self::Device(_, label, _) => label,
+            Self::Empty(label, _) => label,
+        }
+    }
+
+    pub fn label_mut(&mut self) -> &mut SlotLabel {
         match self {
             Self::Device(_, label, _) => label,
             Self::Empty(label, _) => label,
