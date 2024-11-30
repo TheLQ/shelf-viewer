@@ -19,8 +19,6 @@ fn main() {
 }
 
 fn inner_main() -> SResult<()> {
-    println!("start");
-
     let args: Vec<String> = args().collect();
     println!("args {}", args.join(","));
     let width: usize = args[1].parse().expect("need width arg");
@@ -42,8 +40,6 @@ fn load_enclosure(
     lsblk_list: &[LsblkEntry],
 ) {
     let slot_len = enclosure.slot_len().unwrap();
-    println!("enclosure {:?} with {} slots", enclosure, slot_len);
-
     let mut states = Vec::with_capacity(slot_len);
     for slot_id in 0..slot_len {
         let slot = enclosure.slot(slot_id);
@@ -95,14 +91,18 @@ fn load_enclosure(
 
         let is_wwid = true;
 
+        let wwid = if let SlotState::Device(_, _, _) = slot_state {
+            slot.device_wwid()
+        } else {
+            None
+        };
         if is_wwid {
-            let line = slot.device_wwid().unwrap_or(not_found("no_wwid"));
+            let line = wwid.clone().unwrap_or(not_found("no_wwid"));
             slot_state.lines_mut().push(SlotLine { line });
         }
 
         if is_wwid {
-            let line = slot
-                .device_wwid()
+            let line = wwid
                 .unwrap_or(not_found("no_wid_file"))
                 .replace("naa.", "wwn-0x");
             slot_state.lines_mut().push(SlotLine { line });

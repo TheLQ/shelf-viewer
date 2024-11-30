@@ -14,7 +14,7 @@ const U_LEFT_ONE_EIGHTH_BLOCK: &str = "\u{258F}";
 
 pub const ALERT_LOCATING: &str = "🚨";
 
-const PADDING_PREFIX: usize = 4;
+const PADDING_PREFIX: usize = 3;
 const PADDING_SUFFIX: usize = 2;
 
 impl ConsoleViewer {
@@ -46,11 +46,6 @@ impl ConsoleViewer {
         cell_start_width += 1;
         cell_end_width += 1;
         let cell_content_width = cell_start_width + cell_end_width;
-        println!(
-            "{} + {} = {}",
-            cell_start_width, cell_end_width, cell_content_width
-        );
-        // let cell_total_width =  + PADDING_PREFIX + PADDING_SUFFIX;
 
         let row_sep = U_LOWER_ONE_EIGHTH_BLOCK
             .repeat(cell_content_width + 1 /*cols*/ + PADDING_PREFIX + PADDING_SUFFIX)
@@ -70,7 +65,6 @@ impl ConsoleViewer {
 
         let mut slot_line_buffer: Vec<String> = vec!["".to_string(); cell_lines];
 
-        println!("with cell {}", cell_lines);
         for (i, slot) in self
             .slot_order
             .order(states.len(), self.width)
