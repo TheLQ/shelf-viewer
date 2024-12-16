@@ -14,6 +14,9 @@ use shelf_viewer::{
     LOCALE,
 };
 
+// "On The Box" size, not computer Gibibytes
+const GIGABYTE: usize = 1000usize.pow(3);
+
 fn main() {
     inner_main().unwrap()
 }
@@ -41,6 +44,7 @@ fn load_enclosure(
 ) {
     let slot_len = enclosure.slot_len().unwrap();
     let mut states = Vec::with_capacity(slot_len);
+    let mut total_enclosure_bytes = 0;
     for slot_id in 0..slot_len {
         let slot = enclosure.slot(slot_id);
 
@@ -89,19 +93,20 @@ fn load_enclosure(
             )
         }
 
-        let is_wwid = true;
+        // TODO: selectively enable flags
+        let is_expanded = false;
 
         let wwid = if let SlotState::Device(_, _, _) = slot_state {
             slot.device_wwid()
         } else {
             None
         };
-        if is_wwid {
+        if is_expanded {
             let line = wwid.clone().unwrap_or(not_found("no_wwid"));
             slot_state.lines_mut().push(SlotLine { line });
         }
 
-        if is_wwid {
+        if is_expanded {
             let line = wwid
                 .unwrap_or(not_found("no_wid_file"))
                 .replace("naa.", "wwn-0x");
@@ -114,12 +119,12 @@ fn load_enclosure(
         //     slot_state.lines_mut().push(SlotLine { line });
         // }
 
-        if is_wwid {
+        if is_expanded {
             let line = slot.device_model().unwrap_or(not_found("no_model_file"));
             slot_state.lines_mut().push(SlotLine { line });
         }
 
-        if is_wwid {
+        if is_expanded {
             let entry = slot
                 .block_name()
                 .map(|block_name| lsblk_list.iter().find(|v| v.device == block_name))
@@ -127,7 +132,7 @@ fn load_enclosure(
             let line = match entry {
                 Some(entry) => {
                     let bytes: usize = entry.bytes.parse().unwrap();
-                    const GIGABYTE: usize = 1000usize.pow(3);
+                    total_enclosure_bytes += bytes;
 
                     let quantity = (bytes / GIGABYTE).to_formatted_string(LOCALE);
                     format!("{} G", quantity)
@@ -135,7 +140,7 @@ fn load_enclosure(
                 None => not_found("no_lsblk"),
             };
             slot_state.lines_mut().push(SlotLine { line });
-            // todo: this is some percent off
+            // todo: this is some percent off???
             // let line;
             // if let Some(bytes_str) = slot.block_size() {
             //     let bytes: usize = bytes_str.parse().expect(&bytes_str);
@@ -152,8 +157,9 @@ fn load_enclosure(
         states.push(slot_state);
     }
 
-    let presentation_mode = false;
-    if presentation_mode {
+    // For screenshots, don't leak exact WWNs, Models, and pool names
+    let privacy_mode = false;
+    if privacy_mode {
         for slot_state in &mut states {
             for line in slot_state.lines_mut() {
                 if line.line.ends_with(" G") {
@@ -203,6 +209,11 @@ fn load_enclosure(
         slot_order: SlotPrintOrder::BottomLeftGoingUp,
     }
     .print(&states);
+
+    println!(
+        "Total Size {} G",
+        (total_enclosure_bytes / GIGABYTE).to_formatted_string(LOCALE)
+    )
 }
 
 const ENABLE_NOT_FOUND: bool = false;
